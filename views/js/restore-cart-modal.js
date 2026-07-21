@@ -116,19 +116,27 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     postAction('add', { products: JSON.stringify(selectedProducts) }).then(function (response) {
-      return response
-        .json()
-        .catch(function () {
-          return null;
-        })
-        .then(function (data) {
-          // Only report the event once the server confirms the add actually
-          // happened — matches the ecosystem-wide rule of never emitting a
-          // GTM event from an optimistic/assumed-successful client action.
-          if (data && data.success) {
-            pushAddToCart(gtmItems);
-          }
-        });
+      return response.text().then(function (rawText) {
+        // TEMPORARY DEBUG — remove once the add_to_cart-not-firing issue is
+        // diagnosed. Logs the raw restore.php body before any JSON.parse
+        // attempt, since a reload right after this request wipes the Network
+        // panel before it can be inspected there.
+        console.log('DEBUG mergesavedcart restore.php raw response:', rawText);
+
+        var data = null;
+        try {
+          data = JSON.parse(rawText);
+        } catch (e) {
+          console.log('DEBUG mergesavedcart restore.php JSON.parse failed:', e);
+        }
+
+        // Only report the event once the server confirms the add actually
+        // happened — matches the ecosystem-wide rule of never emitting a
+        // GTM event from an optimistic/assumed-successful client action.
+        if (data && data.success) {
+          pushAddToCart(gtmItems);
+        }
+      });
     }).then(function () {
       window.location.reload();
     });
