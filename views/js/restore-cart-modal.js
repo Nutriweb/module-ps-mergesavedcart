@@ -1,7 +1,24 @@
-document.addEventListener('DOMContentLoaded', function () {
+// Registering a 'DOMContentLoaded' listener only works if this script runs
+// before that event fires. This file is enqueued via registerJavascript()
+// with position 'bottom', but once combined/cached by PrestaShop's CCC
+// feature (or reordered by the optimizer module's asset pipeline) it can end
+// up executing after the event already fired — a listener registered for an
+// event that already happened never runs, so init() would silently never
+// execute (no errors, nothing). Guarding on document.readyState covers both
+// cases: run immediately if the document is already parsed, otherwise wait.
+// TEMPORARY DEBUG — proves the script file itself is executing at all,
+// independent of the DOMContentLoaded/readyState timing question below.
+console.log('DEBUG mergesavedcart: script file executed, readyState=', document.readyState);
+
+function mergesavedcartInit() {
+  // TEMPORARY DEBUG — proves init() actually ran (vs. being registered for
+  // an event that already fired and will never come).
+  console.log('DEBUG mergesavedcart: init() running');
+
   var modalElement = document.getElementById('mergesavedcart-restore-modal');
 
   if (!modalElement) {
+    console.log('DEBUG mergesavedcart: no #mergesavedcart-restore-modal in DOM, bailing out');
     return;
   }
 
@@ -91,6 +108,10 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   addButton.addEventListener('click', function () {
+    // TEMPORARY DEBUG — proves the click listener is actually attached and
+    // firing.
+    console.log('DEBUG mergesavedcart: add-to-cart button clicked');
+
     var selectedProducts = [];
     var gtmItems = [];
 
@@ -116,19 +137,27 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     postAction('add', { products: JSON.stringify(selectedProducts) }).then(function (response) {
-      return response
-        .json()
-        .catch(function () {
-          return null;
-        })
-        .then(function (data) {
-          // Only report the event once the server confirms the add actually
-          // happened — matches the ecosystem-wide rule of never emitting a
-          // GTM event from an optimistic/assumed-successful client action.
-          if (data && data.success) {
-            pushAddToCart(gtmItems);
-          }
-        });
+      return response.text().then(function (rawText) {
+        // TEMPORARY DEBUG — remove once the add_to_cart-not-firing issue is
+        // diagnosed. Logs the raw restore.php body before any JSON.parse
+        // attempt, since a reload right after this request wipes the Network
+        // panel before it can be inspected there.
+        console.log('DEBUG mergesavedcart restore.php raw response:', rawText);
+
+        var data = null;
+        try {
+          data = JSON.parse(rawText);
+        } catch (e) {
+          console.log('DEBUG mergesavedcart restore.php JSON.parse failed:', e);
+        }
+
+        // Only report the event once the server confirms the add actually
+        // happened — matches the ecosystem-wide rule of never emitting a
+        // GTM event from an optimistic/assumed-successful client action.
+        if (data && data.success) {
+          pushAddToCart(gtmItems);
+        }
+      });
     }).then(function () {
       window.location.reload();
     });
@@ -137,4 +166,10 @@ document.addEventListener('DOMContentLoaded', function () {
   dismissButton.addEventListener('click', function () {
     postAction('dismiss', {});
   });
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', mergesavedcartInit);
+} else {
+  mergesavedcartInit();
+}
