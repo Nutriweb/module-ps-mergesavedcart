@@ -97,7 +97,7 @@ class AbandonedCartFinder
      * @param int $idAbandonedCart
      * @param int $idCurrentCart
      *
-     * @return array{id_abandoned_cart:int, products:array<int, array{id_product:int, id_product_attribute:int, quantity:int}>}|null
+     * @return array{id_abandoned_cart:int, products:array<int, array{id_product:int, id_product_attribute:int, quantity:int, stock_quantity:int, allow_oosp:bool}>}|null
      */
     public function findEligibleProducts(int $idCustomer, int $idAbandonedCart, int $idCurrentCart): ?array
     {
@@ -125,6 +125,10 @@ class AbandonedCartFinder
                 'id_product' => (int) $product['id_product'],
                 'id_product_attribute' => (int) $product['id_product_attribute'],
                 'quantity' => (int) $product['cart_quantity'],
+                // Live stock join from getProducts(), not stale abandoned-cart
+                // data — reflects current inventory, re-checked again below.
+                'stock_quantity' => (int) $product['stock_quantity'],
+                'allow_oosp' => (bool) $product['allow_oosp'],
             ];
         }
 
@@ -238,7 +242,7 @@ class AbandonedCartFinder
      * Hydrates a slim product list with the name/price/image data the modal
      * template needs.
      *
-     * @param array<int, array{id_product:int, id_product_attribute:int, quantity:int}> $products
+     * @param array<int, array{id_product:int, id_product_attribute:int, quantity:int, stock_quantity:int, allow_oosp:bool}> $products
      *
      * @return array<int, array>
      */
@@ -291,6 +295,10 @@ class AbandonedCartFinder
                 // plain float rather than the locale-formatted display strings above.
                 'price' => round($unitPrice, 2),
                 'image_url' => $imageUrl,
+                // Same "insufficient stock and backorders not allowed" basis
+                // core uses (src/Adapter/Presenter/Cart/CartProductLazyArray.php)
+                // to decide 'unavailable', collapsed to a single flag here.
+                'out_of_stock' => $productData['stock_quantity'] < $quantity && !$productData['allow_oosp'],
             ];
         }
 

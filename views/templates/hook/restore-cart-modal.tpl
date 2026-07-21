@@ -20,7 +20,7 @@
         </p>
         <ul class="list-group list-group-flush"{if $mergesavedcart_products|@count > 4} style="max-height: 430px; overflow-y: auto;"{/if}>
           {foreach from=$mergesavedcart_products item=product}
-            <li class="list-group-item d-flex align-items-center py-3">
+            <li class="list-group-item d-flex align-items-center py-3{if $product.out_of_stock} text-muted bg-light opacity-75{/if}">
               <input class="form-check-input flex-shrink-0 mergesavedcart-product-checkbox me-3"
                      type="checkbox"
                      checked
@@ -39,6 +39,9 @@
                   {$product.name}
                   {if $product.combination}
                     <div class="text-muted small">{$product.combination}</div>
+                  {/if}
+                  {if $product.out_of_stock}
+                    <div><span class="badge bg-danger">{l s='Out of stock' d='Modules.Mergesavedcart.Shop'}</span></div>
                   {/if}
               </div>
             </li>
