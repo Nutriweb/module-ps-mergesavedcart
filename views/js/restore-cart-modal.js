@@ -1,7 +1,24 @@
-document.addEventListener('DOMContentLoaded', function () {
+// Registering a 'DOMContentLoaded' listener only works if this script runs
+// before that event fires. This file is enqueued via registerJavascript()
+// with position 'bottom', but once combined/cached by PrestaShop's CCC
+// feature (or reordered by the optimizer module's asset pipeline) it can end
+// up executing after the event already fired — a listener registered for an
+// event that already happened never runs, so init() would silently never
+// execute (no errors, nothing). Guarding on document.readyState covers both
+// cases: run immediately if the document is already parsed, otherwise wait.
+// TEMPORARY DEBUG — proves the script file itself is executing at all,
+// independent of the DOMContentLoaded/readyState timing question below.
+console.log('DEBUG mergesavedcart: script file executed, readyState=', document.readyState);
+
+function mergesavedcartInit() {
+  // TEMPORARY DEBUG — proves init() actually ran (vs. being registered for
+  // an event that already fired and will never come).
+  console.log('DEBUG mergesavedcart: init() running');
+
   var modalElement = document.getElementById('mergesavedcart-restore-modal');
 
   if (!modalElement) {
+    console.log('DEBUG mergesavedcart: no #mergesavedcart-restore-modal in DOM, bailing out');
     return;
   }
 
@@ -91,6 +108,10 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   addButton.addEventListener('click', function () {
+    // TEMPORARY DEBUG — proves the click listener is actually attached and
+    // firing.
+    console.log('DEBUG mergesavedcart: add-to-cart button clicked');
+
     var selectedProducts = [];
     var gtmItems = [];
 
@@ -145,4 +166,10 @@ document.addEventListener('DOMContentLoaded', function () {
   dismissButton.addEventListener('click', function () {
     postAction('dismiss', {});
   });
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', mergesavedcartInit);
+} else {
+  mergesavedcartInit();
+}
